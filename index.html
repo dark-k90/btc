@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Enter your Bitcoin wallet address for a chance to win in our exclusive Bitcoin giveaway.">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>Bitcoin Giveaway — Enter to Win</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#hero">
+        <span class="btc-icon" aria-hidden="true">₿</span>
+        <span class="brand-text">Bitcoin Giveaway</span>
+      </a>
+
+      <button
+        class="nav-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="primary-nav"
+        aria-label="Toggle navigation menu"
+      >
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+
+      <nav id="primary-nav" class="primary-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#hero">Home</a></li>
+          <li><a href="#wallet">Enter</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section id="hero" class="reveal">
+      <div class="hero-icon" aria-hidden="true">
+        <span class="btc-icon btc-icon--hero">₿</span>
+      </div>
+      <h1>Win Bitcoin in Our Exclusive Giveaway</h1>
+      <p class="hero-lead">
+        Join thousands of participants for a chance to receive free Bitcoin.
+        Enter your wallet address below — it only takes a moment.
+      </p>
+      <p class="hero-cta">
+        <a class="btn btn-primary" href="#wallet">Enter Now</a>
+      </p>
+      <p class="hero-badge"><small>Limited time offer. Terms and conditions apply.</small></p>
+
+      <div class="stats" aria-label="Giveaway statistics">
+        <div class="stat-card">
+          <span class="stat-value" data-counter="12500" data-suffix="+">0</span>
+          <span class="stat-label">Participants</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" data-counter="5" data-decimals="0" data-suffix=" BTC">0</span>
+          <span class="stat-label">Prize Pool</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" data-counter="48" data-suffix="h">0</span>
+          <span class="stat-label">Avg. Payout Time</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="wallet" class="reveal" aria-labelledby="wallet-heading">
+      <h2 id="wallet-heading">Enter Your Bitcoin Wallet</h2>
+      <p class="section-intro">
+        Submit a valid Bitcoin wallet address to participate. Double-check your
+        address before submitting — rewards are sent directly to the address you provide.
+      </p>
+
+      <form id="wallet-form" action="#" method="post" novalidate>
+        <div id="form-message" class="form-message" role="alert" aria-live="polite" tabindex="-1" hidden></div>
+
+        <div class="form-field">
+          <label for="wallet-address">Bitcoin wallet address</label>
+          <input
+            type="text"
+            id="wallet-address"
+            name="wallet-address"
+            required
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="bc1..."
+            aria-describedby="wallet-address-error"
+          >
+          <span id="wallet-address-error" class="field-error" role="alert"></span>
+        </div>
+
+        <div class="form-field">
+          <label for="email">Email address (optional)</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            aria-describedby="email-error"
+          >
+          <span id="email-error" class="field-error" role="alert"></span>
+        </div>
+
+        <div class="form-field consent-row">
+          <input type="checkbox" id="consent" name="consent" required>
+          <label for="consent">
+            I agree to the <a href="#">Terms of Service</a> and confirm I am eligible to participate.
+          </label>
+        </div>
+
+        <div class="form-field form-actions">
+          <button class="btn btn-primary btn-block" type="submit">
+            <span class="btn-text">Submit Wallet Address</span>
+            <span class="btn-loader" aria-hidden="true"></span>
+          </button>
+        </div>
+      </form>
+
+      <p class="form-disclaimer">
+        <small>
+          By submitting, you acknowledge this is a promotional giveaway. This is not financial advice.
+          One entry per wallet address. See full rules in our FAQ.
+        </small>
+      </p>
+    </section>
+
+    <section id="features" class="reveal" aria-labelledby="features-heading">
+      <h2 id="features-heading">Why Join</h2>
+      <ul class="feature-grid">
+        <li class="card">
+          <h3>Fast Payouts</h3>
+          <p>
+            Winners receive Bitcoin directly to their submitted wallet address
+            with minimal processing time.
+          </p>
+        </li>
+        <li class="card">
+          <h3>Secure Process</h3>
+          <p>
+            We only collect your wallet address. No private keys or seed phrases
+            are ever requested.
+          </p>
+        </li>
+        <li class="card">
+          <h3>Transparent Rules</h3>
+          <p>
+            Clear eligibility requirements and selection criteria are published
+            upfront so you know exactly how the giveaway works.
+          </p>
+        </li>
+        <li class="card">
+          <h3>Community Trust</h3>
+          <p>
+            Backed by a growing community of Bitcoin enthusiasts who have
+            participated in previous successful campaigns.
+          </p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="faq" class="reveal" aria-labelledby="faq-heading">
+      <h2 id="faq-heading">Frequently Asked Questions</h2>
+
+      <div class="faq-list">
+        <details class="card">
+          <summary>Who is eligible to participate?</summary>
+          <p>
+            Participants must be 18 years or older and reside in a region where
+            promotional giveaways are permitted. See our Terms of Service for full
+            eligibility details.
+          </p>
+        </details>
+
+        <details class="card">
+          <summary>Which wallet types are supported?</summary>
+          <p>
+            We accept standard Bitcoin addresses including Legacy (starting with 1),
+            SegWit (starting with 3), and Native SegWit (starting with bc1).
+          </p>
+        </details>
+
+        <details class="card">
+          <summary>When will winners be announced?</summary>
+          <p>
+            Winners are selected at the end of each giveaway period. If your wallet
+            address is chosen, Bitcoin will be sent directly to the address you submitted.
+          </p>
+        </details>
+
+        <details class="card">
+          <summary>Is this giveaway legitimate?</summary>
+          <p>
+            Yes. We never ask for private keys, seed phrases, or upfront payments.
+            If anyone requests those, it is a scam and not affiliated with this campaign.
+          </p>
+        </details>
+
+        <details class="card">
+          <summary>How do I get support?</summary>
+          <p>
+            For questions about your entry or the giveaway rules, contact our support
+            team using the details in the Contact section below.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <section id="contact" class="reveal" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Contact Us</h2>
+      <p class="section-intro">
+        Have a question about the giveaway? Our support team is here to help.
+      </p>
+      <address class="card contact-card">
+        Email: <a href="mailto:support@bitcoingiveaway.example">support@bitcoingiveaway.example</a>
+      </address>
+      <p class="contact-hours">
+        Support hours: Monday–Friday, 9:00 AM – 5:00 PM UTC
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Bitcoin Giveaway. All rights reserved.</p>
+    <nav aria-label="Footer">
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+      </ul>
+    </nav>
+    <p class="footer-disclaimer">
+      <small>
+        Bitcoin Giveaway is a promotional campaign. Cryptocurrency involves risk.
+        Nothing on this page constitutes financial advice.
+      </small>
+    </p>
+  </footer>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
